@@ -2,6 +2,7 @@ package dev.naman.productservicettsmorningdeb24.controllers;
 
 import dev.naman.productservicettsmorningdeb24.dtos.CreateProductRequestDto;
 import dev.naman.productservicettsmorningdeb24.dtos.ErrorDto;
+import dev.naman.productservicettsmorningdeb24.dtos.UserDTO;
 import dev.naman.productservicettsmorningdeb24.exceptions.ProductNotFoundException;
 import dev.naman.productservicettsmorningdeb24.models.Product;
 import dev.naman.productservicettsmorningdeb24.services.FakeStoreProductService;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -26,6 +28,11 @@ public class ProductController {
 //    private ProductService productService2 = new FakeStoreProductService();
 
 
+    //To learn testcase, I have added the @Qualifier("fakeStoreProductService") here
+    /*public ProductController( @Qualifier("fakeStoreProductService") ProductService productService, RestTemplate restTemplate) {
+        this.productService =productService;
+        this.restTemplate =restTemplate;
+    }*/
     public ProductController(@Qualifier("selfProductService") ProductService productService,
                              RestTemplate restTemplate
     ) {
@@ -59,17 +66,52 @@ public class ProductController {
 
     @GetMapping("/products/{id}")
     public Product getProductDetails(@PathVariable("id") Long productId) throws ProductNotFoundException {
-        return productService.getSingleProduct(productId);
+        Product response = productService.getSingleProduct(productId);
+        return response;
     }
 
     @GetMapping("/products")
     public ResponseEntity<List<Product>> getAllProducts() throws ProductNotFoundException {
 
-        List<Product> products = productService.getProducts();
+        //I want to call userService from this ProductService using restTemplate
+        //Get the url of userService(Usually we use http://localhost:8181/users to call userService, if we want particular id, then we use http://localhost:8181/users/1
+        //We don't want to hard code the same end point...
+
+        //So, we do Client Side Load Balancing.
+        //Hence, we did fetch.registry = true using eureka(See application.properties)
+        //We have 3 instances/servers of userService. So,the url like localhost:UserService:8181, localhost:UserService:8182, localhost:UserService:8183
+        //Let's say we want this userID = 2...Among any of the server of userService, we get userId = 2 users data
+
+        //String url = "http://localhost:8181/users/1";
+        String url = "http://userservice/users/2";
+        //getForObject(endpoint, userDTO), we have use userService from ProductService, so use restTemplate and return userDTO
+        //So, we have user object from the userService
+        UserDTO userDTO = restTemplate.getForObject(url, UserDTO.class);
+
+
+        List<Product> productList = productService.getProducts();
+
+        /*
+        //For learning test cases. I have added extraProduct here and add into productListSample...
+        //I have just commented this whole now and back to earlier code what it is
+
+        List<Product> productListSample = new ArrayList<>();
+
+        Product extraProduct = new Product();
+        extraProduct.setPrice(450);
+        extraProduct.setTitle("Historical Books");
+        extraProduct.setDescription("Buying a novels");
+
+        //productList.add(extraProduct);
+        productListSample.add(extraProduct);
 
 //        throw new ProductNotFoundException("Bla bla bla");
 
-        ResponseEntity<List<Product>> response = new ResponseEntity<>(products, HttpStatus.OK);
+        ResponseEntity<List<Product>> response = new ResponseEntity<>(productListSample, HttpStatus.OK);
+        return response;*/
+
+
+        ResponseEntity<List<Product>> response = new ResponseEntity<>(productList, HttpStatus.OK);
         return response;
     }
 
